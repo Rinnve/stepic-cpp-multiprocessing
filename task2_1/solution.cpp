@@ -1,6 +1,7 @@
 #include <iostream>
 #include <regex>
 #include <set>
+#include <sstream>
 
 struct Element 
 {
@@ -16,19 +17,15 @@ struct ElementComparator
   }
 };
 
-using namespace std;
-int main()
-{
-  string input;
-  cin >> input;
-    
-  regex re(
+std::string derivative(std::string polynomial) {
+  using namespace std;
+    regex re(
     R"_(([+-]){0,1}(\d*)(?:\*){0,1}(?:(x)(?:\^(\d*)){0,1}){0,1})_"
   );
 
   set<Element, ElementComparator> elements;
 
-  auto rstart = sregex_iterator(input.begin(), input.end(), re);
+  auto rstart = sregex_iterator(polynomial.begin(), polynomial.end(), re);
   auto rend = sregex_iterator();
   for (auto i = rstart; i != rend; i++)
   {
@@ -64,6 +61,7 @@ int main()
     }
     elements.insert(elem);
   }
+  stringstream output;
   bool first = true;
   for (auto i = elements.begin(); i != elements.end(); i++)
   {
@@ -73,17 +71,26 @@ int main()
     {
       if (new_coeff > 0 && !first)
       {
-        cout << "+";        
+        output << "+";        
       } 
       if (new_power > 0)
       {
-        if (abs(new_coeff) != 1) cout << new_coeff << "*x";
-        if (new_power > 1) cout << "^" << new_power;
+        if (abs(new_coeff) != 1) output << new_coeff << "*x";
+        if (new_power > 1) output << "^" << new_power;
       } 
-      else cout << new_coeff;
+      else output << new_coeff;
     }
     first = false;
   }
-  cout << endl;
+  return output.str();
+}
+
+
+int main()
+{
+  std::string input;
+  std::cin >> input;
+  std::string result = derivative(input);
+  std::cout << result << std::endl; 
   return 0;
 }
