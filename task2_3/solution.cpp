@@ -60,9 +60,9 @@ public:
         if (pointer == nullptr) return nullptr;
         auto i = allocated_spans.find(memspan((uintptr_t) pointer, 0));
         if (i == allocated_spans.end()) return nullptr;
-        size_t old_size = (*i).size; 
+        size_t copy_size = ((*i).size < size) ? (*i).size : size;
         void *new_pointer = Alloc(size);
-        memcpy(new_pointer, pointer, old_size);
+        memcpy(new_pointer, pointer, copy_size);
         Free(pointer);
         return new_pointer;    
     };
@@ -85,6 +85,14 @@ public:
         }
         return r;
     }
+    void print_spans()
+    {
+        std::cout << "Allocated spans:" << std::endl;
+        for (auto i = allocated_spans.begin(); i != allocated_spans.end(); i++)
+        {
+            std::cout << "Start: " << (*i).start - (uintptr_t) Memory << " Size: " << (*i).size << std::endl;
+        }
+    }
 };
 
 
@@ -96,20 +104,26 @@ int main()
     A1.Free(A1_P1);
     SmallAllocator A2;
     int * A2_P1 = (int *) A2.Alloc(10 * sizeof(int));
+    A2.print_spans();
     for(unsigned int i = 0; i < 10; i++) A2_P1[i] = i;
     for(unsigned int i = 0; i < 10; i++) if(A2_P1[i] != i) std::cout << "ERROR 1" << std::endl;
     int * A2_P2 = (int *) A2.Alloc(10 * sizeof(int));
+    A2.print_spans();
     for(unsigned int i = 0; i < 10; i++) A2_P2[i] = -1;
     for(unsigned int i = 0; i < 10; i++) if(A2_P1[i] != i) std::cout << "ERROR 2" << std::endl;
     for(unsigned int i = 0; i < 10; i++) if(A2_P2[i] != -1) std::cout << "ERROR 3" << std::endl;
     A2_P1 = (int *) A2.ReAlloc(A2_P1, 20 * sizeof(int));
+    A2.print_spans();
     for(unsigned int i = 10; i < 20; i++) A2_P1[i] = i;
     for(unsigned int i = 0; i < 20; i++) if(A2_P1[i] != i) std::cout << "ERROR 4" << std::endl;
     for(unsigned int i = 0; i < 10; i++) if(A2_P2[i] != -1) std::cout << "ERROR 5" << std::endl;
     A2_P1 = (int *) A2.ReAlloc(A2_P1, 5 * sizeof(int));
+    A2.print_spans();
     for(unsigned int i = 0; i < 5; i++) if(A2_P1[i] != i) std::cout << "ERROR 6" << std::endl;
-    for(unsigned int i = 0; i < 10; i++) if(A2_P2[i] != -1) std::cout << "ERROR 7" << std::endl;
+    for(unsigned int i = 0; i < 10; i++) if(A2_P2[i] != -1) std::cout << A2_P2[i] << " ERROR 7" << std::endl;
     A2.Free(A2_P1);
+    A2.print_spans();
     A2.Free(A2_P2);
+    A2.print_spans();
     return 0;
 }
