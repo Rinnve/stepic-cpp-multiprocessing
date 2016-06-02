@@ -1,12 +1,13 @@
 #include <iostream>
 #include <set>
+#include <cstring>
 
 struct memspan 
 {
     uintptr_t start;
-    size_t length;
-    memspan(uintptr_t start, size_t length):
-        start(start), length(length)
+    size_t size;
+    memspan(uintptr_t start, size_t size):
+        start(start), size(size)
     { };    
 };
 
@@ -14,7 +15,7 @@ struct memspan_len_cmp
 {
     bool operator() (const memspan &m1, const memspan &m2) const
     {
-        return m1.length < m2.length || m1.start < m2.start;
+        return m1.size < m2.size || m1.start < m2.start;
     }
 };
 
@@ -41,11 +42,11 @@ public:
     {        
         for (auto i = free_spans.begin(); i != free_spans.end(); i++)
         {
-            if ((*i).length >= size)
+            if ((*i).size >= size)
             {
                 allocated_spans.insert(memspan((*i).start, size));
-                if ((*i).length > size)
-                    free_spans.insert(memspan((*i).start + size, (*i).length - size));
+                if ((*i).size > size)
+                    free_spans.insert(memspan((*i).start + size, (*i).size - size));
                 void *result = (void *) (*i).start;
                 free_spans.erase(i);
                 return result;
@@ -53,22 +54,34 @@ public:
         }
         return nullptr; 
     };
-    /*
-    void *ReAlloc(void *Pointer, unsigned int Size) {};*/
-    void Free(void *Pointer) 
+    
+    void *ReAlloc(void *pointer, unsigned int size)
     {
-        if (Pointer == nullptr) return;
-        auto i = allocated_spans.find(memspan((uintptr_t) Pointer, 0));
+        if (pointer == nullptr) return nullptr;
+        auto i = allocated_spans.find(memspan((uintptr_t) pointer, 0));
+        if (i == allocated_spans.end()) return nullptr;
+        size_t old_size = (*i).size; 
+        void *new_pointer = Alloc(size);
+        memcpy(new_pointer, pointer, old_size);
+        Free(pointer);
+        return new_pointer;    
+    };
+    
+    void Free(void *pointer) 
+    {
+        if (pointer == nullptr) return;
+        auto i = allocated_spans.find(memspan((uintptr_t) pointer, 0));
         if (i == allocated_spans.end()) return;
         free_spans.insert((*i));
         allocated_spans.erase(i);
     };
+    
     size_t freememlen()
     {
         size_t r = 0;
         for (auto i = free_spans.begin(); i != free_spans.end(); i++)
         {
-            r += (*i).length;
+            r += (*i).size;
         }
         return r;
     }
@@ -78,12 +91,6 @@ public:
 int main()
 {
     SmallAllocator A1;
-    std::cout << A1.freememlen() << std::endl;
-    int * A1_P1 = (int *) A1.Alloc(sizeof(int));
-    std::cout << A1.freememlen() << std::endl;
-    A1.Free(A1_P1);
-    std::cout << A1.freememlen() << std::endl;
-    /*
     int * A1_P1 = (int *) A1.Alloc(sizeof(int));
     A1_P1 = (int *) A1.ReAlloc(A1_P1, 2 * sizeof(int));
     A1.Free(A1_P1);
@@ -103,6 +110,6 @@ int main()
     for(unsigned int i = 0; i < 5; i++) if(A2_P1[i] != i) std::cout << "ERROR 6" << std::endl;
     for(unsigned int i = 0; i < 10; i++) if(A2_P2[i] != -1) std::cout << "ERROR 7" << std::endl;
     A2.Free(A2_P1);
-    A2.Free(A2_P2);*/
+    A2.Free(A2_P2);
     return 0;
 }
